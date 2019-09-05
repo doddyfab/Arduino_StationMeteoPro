@@ -1,30 +1,30 @@
 # Arduino_StationMeteoPro
-La station sera basée sur un Arduino Uno, couplée à un shield Ethernet (le filaire y’a que ca de vrai) qui servira aussi de lecteur carte micro SD.
+La station est basée sur un Arduino Uno, couplée à un shield Ethernet (le filaire y’a que ca de vrai) qui servira aussi de lecteur carte micro SD.
 
 ## Les éléments qui composeront la station sont :
 
-    Arduino Uno R3
-    kit Lextronic Girouette/Anémomètre/Pluviomètre avec interface Grove
-    sonde BME280 pour température/humidité/baromètre
-    plus tard se rajoutera une sonde de rayonnement solaire RG100
+* Arduino Uno R3
+* kit Lextronic Girouette/Anémomètre/Pluviomètre avec interface Grove
+* sonde BME280 pour température/humidité/baromètre
+* plus tard se rajoutera une sonde de rayonnement solaire RG100
 
 ## Les données seront traitées comme suit :
 
-    L’arduino génèrera les données toutes les min (voir ci après)
-    Il stockera la données dans un fichier CSV horodaté par jour
-    Il appellera une URL sur mon Synology pour stocker les données sur le synology (backup)
-    Il stockera via une URL Synology les données dans une base MySQL qui servira au site météo
+* L’arduino génèrera les données toutes les min (voir ci après)
+* Il stockera la données dans un fichier CSV horodaté par jour
+* Il appellera une URL sur mon Synology pour stocker les données sur le synology (backup)
+* Il stockera via une URL Synology les données dans une base MySQL qui servira au site météo
 
 ## Le projet comportera aussi toute la partie serveur web avec un site complet d’accès aux données avec :
 
-    des infos lives
-    des prévisions de pluie sur 12h, de temps sur 5j
-    des infos vigilance météo france
-    la qualité de l’air
-    les pollens
-    une image webcam horodatée toutes les 5 min
-    éphémérides
-    des statistiques mensuelles, annuelles, …
+* des infos lives
+* des prévisions de pluie sur 12h, de temps sur 5j
+* des infos vigilance météo france
+* la qualité de l’air
+* les pollens
+* une image webcam horodatée toutes les 5 min
+* éphémérides
+* des statistiques mensuelles, annuelles, …
 
 # Gestion des capteurs
 ## Girouette

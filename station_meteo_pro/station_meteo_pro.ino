@@ -20,6 +20,10 @@
   Site météo : https://www.meteo-four38.fr
   Date : 2010-09-05
 
+  Changelog : 
+  16/09/2019  v1.1  Calibration temperature avec ajout offset
+  05/09/2019  v1    version initiale
+
 */
 
 
@@ -52,6 +56,7 @@
 #define PI        3.1415
 #define RAYON     0.07  //rayon en mètre de l'anémomètre en mètre
 #define ALTITUDE  360   //altitude de la station météo
+#define TEMP_OFFSET -2  //offset température 
 
 /* 
  *  Variables globales
@@ -94,6 +99,7 @@ EthernetClient client;          //client pour appeler le webservice sur le synol
  */
 void setup()
 {
+  delay(2000);   //initialisation de la carte ethernet 
   Serial.begin(9600);
 
   pinMode(PLUVIOMETRE, INPUT_PULLUP);
@@ -320,8 +326,9 @@ void loop(){
     nbGir++;
 
     double val1 = bme.readTemperature();
+    val1 = val1 + TEMP_OFFSET;
     temp += val1;
-    double P = getP((bme.readPressure() / 100.0F), bme.readTemperature());
+    double P = getP((bme.readPressure() / 100.0F), val1);
     pressure += P;
     double humidity = bme.readHumidity();
     hum += humidity;

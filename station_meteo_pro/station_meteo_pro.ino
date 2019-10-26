@@ -21,6 +21,7 @@
   Date : 2010-09-05
 
   Changelog : 
+  26/10/2019  v1.2  Ajout capteur SHT31 pour temperature et humidité en remplacement du BME280
   16/09/2019  v1.1  Calibration temperature avec ajout offset
   05/09/2019  v1    version initiale
 
@@ -38,6 +39,7 @@
 #include <Adafruit_BME280.h>
 #include <TimeLib.h>
 #include <NtpClientLib.h>
+#include <Adafruit_SHT31.h>
 
 /* 
  *  Variables statiques
@@ -90,6 +92,7 @@ boolean debug = true;  //TRUE = ecriture du programme, active tous les Serial.Pr
  *  Variables globales d'initialisation
  */
 Adafruit_BME280 bme;  //BME280
+Adafruit_SHT31 sht31 = Adafruit_SHT31(); //SHT31
 File myFile;          //fichier de stockage sur la carte SD
 char server[] = "192.168.1.2";  //IP du synology
 EthernetClient client;          //client pour appeler le webservice sur le synology
@@ -110,6 +113,12 @@ void setup()
   attachInterrupt(PLUVIOMETRE,interruptPluviometre,RISING) ;
   attachInterrupt(ANEMOMETRE,interruptAnemometre,RISING) ;
   bool status = bme.begin(0x76);
+
+  //démarrage SHT31
+  if (! sht31.begin(0x44)) {   // Set to 0x45 for alternate i2c addr
+    Serial.println("Couldn't find SHT31");
+    while (1) delay(1);
+  }
 
   //on teste l'ouverture de la carte SD.
   //si OK : clignotement de la led SD 1 fois
@@ -325,12 +334,17 @@ void loop(){
     gir += getGirouetteAngle(gdir);
     nbGir++;
 
+    /*
     double val1 = bme.readTemperature();
     val1 = val1 + TEMP_OFFSET;
+   */
+    double val1 = sht31.readTemperature();
     temp += val1;
+    
     double P = getP((bme.readPressure() / 100.0F), val1);
     pressure += P;
-    double humidity = bme.readHumidity();
+   // double humidity = bme.readHumidity();
+    double humidity = sht31.readHumidity();
     hum += humidity;
     nbBME280++;
 
@@ -393,7 +407,20 @@ void loop(){
 
     //ligne qui sera enregistrée sur la carte SD, sur le synology et qui servira pour l'insertion SQL
     String lineToWrite = getNTPDateFRForMySQL(NTP.getDateStr())+' '+getNTPTimeFRForMySQL(NTP.getTimeStr())+';'+String(avgtemp)+';'+String(avghum)+';'+String(avgwind)+';'+String(gust)+';'+String(avggir)+';'+String(avgpressure)+';'+String(pluvio1min);
-  
+
+    //20/10/2019
+    //Modification de l'emplacement des RAZ : fin de programme -> avant insertion BDD et carte SD pour ne plus avoir la latence.
+    //RAZ des compteurs qui ont servi a calculé les valeurs moyennes sur 1 min
+    wind = 0;
+    gust = 0;
+    nbAnemo = 0;
+    gir = 0;
+    nbGir = 0;
+    temp = 0;
+    hum = 0;
+    pressure = 0;
+    nbBME280 = 0;
+    
     //si la carte SD est opérationnelle, écriture de la ligne
     if(SDStatus == true){
       //création de l'arborescence Y/M si non existante
@@ -445,16 +472,7 @@ void loop(){
      if(debug == true)  Serial.println("connection failed");
     }
 
-    //RAZ des compteurs qui ont servi a calculé les valeurs moyennes sur 1 min
-    wind = 0;
-    gust = 0;
-    nbAnemo = 0;
-    gir = 0;
-    nbGir = 0;
-    temp = 0;
-    hum = 0;
-    pressure = 0;
-    nbBME280 = 0;
+    
     
   }
 

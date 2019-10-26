@@ -8,6 +8,7 @@
      - Pluviomètre Lextronic  LEXCA001
      - Interfacage Lextronic Grove avec module SLD01099P
      - Capteur BME280 pour temperature, humidité, pression atmosphérique
+     - Capteur SHT31 pour temperature et humidité
 
   Le programme sauvegarde les données : 
      - sur carte SD locale, par dossier Année/Mois puis un fichier par jour

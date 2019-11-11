@@ -111,6 +111,8 @@ Adafruit_SHT31 sht31 = Adafruit_SHT31(); //SHT31
 File myFile;          //fichier de stockage sur la carte SD
 char server[] = "192.168.1.2";  //IP du synology
 EthernetClient client;          //client pour appeler le webservice sur le synology
+OneWire oneWire(DS18B20_SONDE);
+DallasTemperature sensors(&oneWire); 
 
 /* 
  *  Setup initial de l'arduino
@@ -134,6 +136,11 @@ void setup()
     Serial.println("Couldn't find SHT31");
     while (1) delay(1);
   }
+
+  //démarrage DS18B20
+   
+  sensors.begin();  
+  sensors.setResolution(11); //0,0625°C
 
   //on teste l'ouverture de la carte SD.
   //si OK : clignotement de la led SD 1 fois
@@ -357,10 +364,7 @@ void loop(){
     temp += val1;
     */
 
-    OneWire oneWire(DS18B20_SONDE);
-    DallasTemperature sensors(&oneWire);  
-    sensors.begin();  
-    sensors.setResolution(11); //0,125°C
+    
     sensors.requestTemperatures(); // Send the command to get temperatures
     double val1 = sensors.getTempCByIndex(0);
     if((val1 == -127) or (val1 > 70)){
@@ -406,9 +410,14 @@ void loop(){
     float avggir = gir / nbGir;
 
    // float avgtemp = temp / nbBME280;
-    sortArray(tab, tab_index);     
-    tab_indexMin = 3;
-    tab_indexMax = tab_index - 4;     
+    sortArray(tab, tab_index);   
+    for (int i = 0 ; i < tab_index ; i++)  {  
+      Serial.print(tab[i]);
+      Serial.print(";");
+      
+    }
+    tab_indexMin = 6;
+    tab_indexMax = tab_index - 6;     
     for (int i = tab_indexMin ; i < tab_indexMax ; i++)  {
           cumul += tab[i] ; //somme des valeurs du tableau
           nbValeur++;

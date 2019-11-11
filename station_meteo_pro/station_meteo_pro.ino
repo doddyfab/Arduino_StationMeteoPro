@@ -7,8 +7,9 @@
      - Girouette Lextronic    LEXCA002
      - Pluviomètre Lextronic  LEXCA001
      - Interfacage Lextronic Grove avec module SLD01099P
-     - Capteur BME280 pour temperature, humidité, pression atmosphérique
-     - Capteur SHT31 pour temperature et humidité
+     - Capteur BME280 pour pression atmosphérique
+     - Capteur SHT31 pour humidité
+     - Capteur DS18B20 pour température sous abri météo jardin
 
   Le programme sauvegarde les données : 
      - sur carte SD locale, par dossier Année/Mois puis un fichier par jour
@@ -22,6 +23,7 @@
   Date : 2010-09-05
 
   Changelog : 
+  11/11/2019  v1.3  Ajout capteur DS18B20 sous abri météo pour températures
   26/10/2019  v1.2  Ajout capteur SHT31 pour temperature et humidité en remplacement du BME280
   16/09/2019  v1.1  Calibration temperature avec ajout offset
   05/09/2019  v1    version initiale
@@ -41,6 +43,9 @@
 #include <TimeLib.h>
 #include <NtpClientLib.h>
 #include <Adafruit_SHT31.h>
+#include <DallasTemperature.h>
+#include <ArduinoSort.h>
+
 
 /* 
  *  Variables statiques
@@ -58,8 +63,9 @@
 #define BME_SCK   13
 #define PI        3.1415
 #define RAYON     0.07  //rayon en mètre de l'anémomètre en mètre
-#define ALTITUDE  360   //altitude de la station météo
+#define ALTITUDE  350   //altitude de la station météo
 #define TEMP_OFFSET -2  //offset température 
+#define DS18B20_SONDE 5 //sonde DS18B20
 
 /* 
  *  Variables globales
@@ -88,6 +94,14 @@ char macstr[18];
 const byte SDCARD_CS_PIN = 10;  //port de la carte SD
 boolean debug = true;  //TRUE = ecriture du programme, active tous les Serial.Println ; FALSE = aucun println affichés
 
+//variable pour tableau de température
+int tab_index = 0;  
+int tab_indexMin = 0;
+int tab_indexMax = 0;
+int nbValeur = 0;
+//float tempFinale(0);
+float cumul(0);
+static float tab[20]; 
 
 /* 
  *  Variables globales d'initialisation
@@ -338,9 +352,24 @@ void loop(){
     /*
     double val1 = bme.readTemperature();
     val1 = val1 + TEMP_OFFSET;
-   */
+   
     double val1 = sht31.readTemperature();
     temp += val1;
+    */
+
+    OneWire oneWire(DS18B20_SONDE);
+    DallasTemperature sensors(&oneWire);  
+    sensors.begin();  
+    sensors.setResolution(11); //0,125°C
+    sensors.requestTemperatures(); // Send the command to get temperatures
+    double val1 = sensors.getTempCByIndex(0);
+    if((val1 == -127) or (val1 > 70)){
+      Serial.println("N/A");
+    }
+    else{     
+      tab[tab_index] = val1; //remplir tableau avec 10 valeurs du capteur qui se suivent
+      tab_index++;
+    } 
     
     double P = getP((bme.readPressure() / 100.0F), val1);
     pressure += P;
@@ -376,7 +405,16 @@ void loop(){
     float avgwind = wind / nbAnemo;
     float avggir = gir / nbGir;
 
-    float avgtemp = temp / nbBME280;
+   // float avgtemp = temp / nbBME280;
+    sortArray(tab, tab_index);     
+    tab_indexMin = 3;
+    tab_indexMax = tab_index - 4;     
+    for (int i = tab_indexMin ; i < tab_indexMax ; i++)  {
+          cumul += tab[i] ; //somme des valeurs du tableau
+          nbValeur++;
+    }
+    float avgtemp = cumul/nbValeur;      
+   
     float avghum = hum / nbBME280;
     float avgpressure = pressure / nbBME280;
 
@@ -421,6 +459,9 @@ void loop(){
     hum = 0;
     pressure = 0;
     nbBME280 = 0;
+    cumul = 0;
+    nbValeur = 0;
+    tab_index = 0;
     
     //si la carte SD est opérationnelle, écriture de la ligne
     if(SDStatus == true){

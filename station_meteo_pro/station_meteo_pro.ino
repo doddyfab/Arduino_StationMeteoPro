@@ -20,7 +20,7 @@
   
   Source :     https://www.sla99.fr
   Site météo : https://www.meteo-four38.fr
-  Date : 2010-09-05
+  Date : 2019-09-05
 
   Changelog : 
   11/11/2019  v1.3  Ajout capteur DS18B20 sous abri météo pour températures
@@ -45,6 +45,7 @@
 #include <Adafruit_SHT31.h>
 #include <DallasTemperature.h>
 #include <ArduinoSort.h>
+#include <dht.h>
 
 
 /* 
@@ -66,6 +67,7 @@
 #define ALTITUDE  350   //altitude de la station météo
 #define TEMP_OFFSET -2  //offset température 
 #define DS18B20_SONDE 5 //sonde DS18B20
+#define DHT22_PIN 5
 
 /* 
  *  Variables globales
@@ -93,7 +95,7 @@ byte mac[6] = { 0xBE, 0xEF, 0x00, 0xFD, 0xb7, 0x91 }; //mac address de la carte 
 char macstr[18];
 const byte SDCARD_CS_PIN = 10;  //port de la carte SD
 boolean debug = true;  //TRUE = ecriture du programme, active tous les Serial.Println ; FALSE = aucun println affichés
-
+double val1 = 0;
 //variable pour tableau de température
 int tab_index = 0;  
 int tab_indexMin = 0;
@@ -113,6 +115,7 @@ char server[] = "192.168.1.2";  //IP du synology
 EthernetClient client;          //client pour appeler le webservice sur le synology
 OneWire oneWire(DS18B20_SONDE);
 DallasTemperature sensors(&oneWire); 
+dht DHT;
 
 /* 
  *  Setup initial de l'arduino
@@ -140,7 +143,9 @@ void setup()
   //démarrage DS18B20
    
   sensors.begin();  
-  sensors.setResolution(11); //0,0625°C
+  sensors.setResolution(12); //0,0625°C
+  sensors.requestTemperatures(); // Send the command to get temperatures
+  val1 = sensors.getTempCByIndex(0);
 
   //on teste l'ouverture de la carte SD.
   //si OK : clignotement de la led SD 1 fois
@@ -359,14 +364,18 @@ void loop(){
     /*
     double val1 = bme.readTemperature();
     val1 = val1 + TEMP_OFFSET;
-   
+
+ */
     double val1 = sht31.readTemperature();
     temp += val1;
-    */
-
     
+   /* int chk = DHT.read22(DHT22_PIN);
+    val1 = DHT.temperature;
+    
+
+  /*
     sensors.requestTemperatures(); // Send the command to get temperatures
-    double val1 = sensors.getTempCByIndex(0);
+    val1 = sensors.getTempCByIndex(0);
     if((val1 == -127) or (val1 > 70)){
       Serial.println("N/A");
     }
@@ -374,6 +383,7 @@ void loop(){
       tab[tab_index] = val1; //remplir tableau avec 10 valeurs du capteur qui se suivent
       tab_index++;
     } 
+   */
     
     double P = getP((bme.readPressure() / 100.0F), val1);
     pressure += P;
@@ -409,20 +419,21 @@ void loop(){
     float avgwind = wind / nbAnemo;
     float avggir = gir / nbGir;
 
-   // float avgtemp = temp / nbBME280;
-    sortArray(tab, tab_index);   
+    float avgtemp = temp / nbBME280;
+  
+    /*sortArray(tab, tab_index);   
     for (int i = 0 ; i < tab_index ; i++)  {  
       Serial.print(tab[i]);
       Serial.print(";");
       
     }
-    tab_indexMin = 6;
-    tab_indexMax = tab_index - 6;     
+    tab_indexMin = 4;
+    tab_indexMax = tab_index - 4;     
     for (int i = tab_indexMin ; i < tab_indexMax ; i++)  {
           cumul += tab[i] ; //somme des valeurs du tableau
           nbValeur++;
     }
-    float avgtemp = cumul/nbValeur;      
+    float avgtemp = cumul/nbValeur;      */
    
     float avghum = hum / nbBME280;
     float avgpressure = pressure / nbBME280;

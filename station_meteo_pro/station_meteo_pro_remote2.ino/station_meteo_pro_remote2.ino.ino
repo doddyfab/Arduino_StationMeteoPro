@@ -3,28 +3,29 @@
   Station Meteo Pro - sonde de temperature déportée
   avec : 
      - Wemos D1 mini pro (drivers : //https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers)
-     - SHT31
+     - DHT22
      
   Le programme récupère la température et l'humidité et l'envoie en wifi sur le serveur : 
   
   Source :     https://www.sla99.fr
   Site météo : https://www.meteo-four38.fr
-  Date : 2019-11-22
+  Date : 2019-12-03
 
   Changelog : 
-  22/11/2019  v1    version initiale
+  03/12/2019  v1    version initiale
 
 */
 
 #include <ESP8266WiFi.h>
 #include <Wire.h>  
-#include <Adafruit_SHT31.h>
+#include "DHTesp.h"
 #include <ESP8266HTTPClient.h>
 
-const char* ssid = "RIBOTRAIN";
-const char* password = "1598741230";
+const char* ssid = "xxxxx";
+const char* password = "xxxxx";
 
-Adafruit_SHT31 sht31 = Adafruit_SHT31(); 
+DHTesp dht;
+
 char server[] = "192.168.1.2";  
 WiFiClient client;
 String KEY_WS="134567654345670012";  
@@ -49,17 +50,13 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());   
   Serial.println(WiFi.macAddress());
-  
 
-  
-  //démarrage SHT31
-  if (! sht31.begin(0x44)) { 
-    Serial.println("Couldn't find SHT31");
-    while (1) delay(1);
-  }
+  dht.setup(4, DHTesp::DHT22); // Connect DHT sensor to GPIO2
 
-  float temp = sht31.readTemperature();
-  float hum = sht31.readHumidity();
+  delay(dht.getMinimumSamplingPeriod());
+
+  float hum = dht.getHumidity();
+  float temp = dht.getTemperature();
   Serial.print(temp);
   Serial.print("   ");
   Serial.println(hum);

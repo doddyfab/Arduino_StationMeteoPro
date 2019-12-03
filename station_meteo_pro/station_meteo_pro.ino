@@ -42,10 +42,8 @@
 #include <Adafruit_BME280.h>
 #include <TimeLib.h>
 #include <NtpClientLib.h>
-#include <Adafruit_SHT31.h>
-#include <DallasTemperature.h>
 #include <ArduinoSort.h>
-#include <dht.h>
+
 
 
 /* 
@@ -66,8 +64,7 @@
 #define RAYON     0.07  //rayon en mètre de l'anémomètre en mètre
 #define ALTITUDE  350   //altitude de la station météo
 #define TEMP_OFFSET -2  //offset température 
-#define DS18B20_SONDE 5 //sonde DS18B20
-#define DHT22_PIN 5
+
 
 /* 
  *  Variables globales
@@ -109,21 +106,20 @@ static float tab[20];
  *  Variables globales d'initialisation
  */
 Adafruit_BME280 bme;  //BME280
-Adafruit_SHT31 sht31 = Adafruit_SHT31(); //SHT31
+//Adafruit_SHT31 sht31 = Adafruit_SHT31(); //SHT31
 File myFile;          //fichier de stockage sur la carte SD
 char server[] = "192.168.1.2";  //IP du synology
 EthernetClient client;          //client pour appeler le webservice sur le synology
-OneWire oneWire(DS18B20_SONDE);
-DallasTemperature sensors(&oneWire); 
-dht DHT;
 
 /* 
  *  Setup initial de l'arduino
  */
 void setup()
 {
+  
   delay(2000);   //initialisation de la carte ethernet 
   Serial.begin(9600);
+  Serial.println("démarrage ...");
 
   pinMode(PLUVIOMETRE, INPUT_PULLUP);
   pinMode(ANEMOMETRE, INPUT_PULLUP);
@@ -132,21 +128,24 @@ void setup()
   pinMode(LED_ERR, OUTPUT);  
   attachInterrupt(PLUVIOMETRE,interruptPluviometre,RISING) ;
   attachInterrupt(ANEMOMETRE,interruptAnemometre,RISING) ;
-  bool status = bme.begin(0x76);
-
-  //démarrage SHT31
+  
+ /* bool status;
+  status = bme.begin();  
+  if (!status) {
+    if(debug == true){
+      Serial.println("Could not find a valid BME280 sensor, check wiring!");
+    }
+    digitalWrite(LED_ERR, HIGH);
+      while (1);
+  }*/
+  
+ /* //démarrage SHT31
   if (! sht31.begin(0x44)) {   // Set to 0x45 for alternate i2c addr
     Serial.println("Couldn't find SHT31");
     while (1) delay(1);
   }
-
-  //démarrage DS18B20
-   
-  sensors.begin();  
-  sensors.setResolution(12); //0,0625°C
-  sensors.requestTemperatures(); // Send the command to get temperatures
-  val1 = sensors.getTempCByIndex(0);
-
+*/
+  /*
   //on teste l'ouverture de la carte SD.
   //si OK : clignotement de la led SD 1 fois
   //si KO : on laisse allumé la led ERROR et la led SD
@@ -162,7 +161,7 @@ void setup()
     digitalWrite(LED_SD, HIGH);
     delay(500);
     digitalWrite(LED_SD, LOW);
-  }
+  }*/
 
   //Démarrage du réseau
   //Si OK : clignotement de la led NETWORK 1 fois
@@ -183,6 +182,8 @@ void setup()
     delay(500);
     digitalWrite(LED_NET, LOW);
   } 
+
+ // bool status = bme.begin(0x76);
 
   //Démarrage de la synchro NTP
   NTP.begin("fr.pool.ntp.org", 1, true);
@@ -361,35 +362,28 @@ void loop(){
     gir += getGirouetteAngle(gdir);
     nbGir++;
 
-    /*
-    double val1 = bme.readTemperature();
+  
+/*    double val1 = bme.readTemperature();
     val1 = val1 + TEMP_OFFSET;
 
- */
+ /*
     double val1 = sht31.readTemperature();
     temp += val1;
-    
-   /* int chk = DHT.read22(DHT22_PIN);
-    val1 = DHT.temperature;
-    
+    */
 
-  /*
-    sensors.requestTemperatures(); // Send the command to get temperatures
-    val1 = sensors.getTempCByIndex(0);
-    if((val1 == -127) or (val1 > 70)){
-      Serial.println("N/A");
-    }
-    else{     
-      tab[tab_index] = val1; //remplir tableau avec 10 valeurs du capteur qui se suivent
-      tab_index++;
-    } 
-   */
+  //  double val2 = bme.readTemperature();
+  //  double P = getP((bme.readPressure() / 100.0F), val2);
+  //  pressure += P;
     
-    double P = getP((bme.readPressure() / 100.0F), val1);
-    pressure += P;
-   // double humidity = bme.readHumidity();
-    double humidity = sht31.readHumidity();
-    hum += humidity;
+   /* double humidity = bme.readHumidity();
+   // double humidity = sht31.readHumidity();
+    hum += humidity;*/
+    double val1 = 0;
+    temp += val1;
+     double humidity = 0;
+     hum += humidity;
+     double P = 1000;
+     pressure += P;
     nbBME280++;
 
     if(debug == true){
@@ -419,23 +413,15 @@ void loop(){
     float avgwind = wind / nbAnemo;
     float avggir = gir / nbGir;
 
+
+
+  //  float avgtemp = bme.readTemperature();
+  //  float avgpressure = getP((bme.readPressure() / 100.0F), avgtemp);
+    
     float avgtemp = temp / nbBME280;
-  
-    /*sortArray(tab, tab_index);   
-    for (int i = 0 ; i < tab_index ; i++)  {  
-      Serial.print(tab[i]);
-      Serial.print(";");
-      
-    }
-    tab_indexMin = 4;
-    tab_indexMax = tab_index - 4;     
-    for (int i = tab_indexMin ; i < tab_indexMax ; i++)  {
-          cumul += tab[i] ; //somme des valeurs du tableau
-          nbValeur++;
-    }
-    float avgtemp = cumul/nbValeur;      */
    
     float avghum = hum / nbBME280;
+    avghum = 0;
     float avgpressure = pressure / nbBME280;
 
     pluvio1min = countPluviometre*VALEUR_PLUVIOMETRE;
@@ -483,7 +469,7 @@ void loop(){
     nbValeur = 0;
     tab_index = 0;
     
-    //si la carte SD est opérationnelle, écriture de la ligne
+   /* //si la carte SD est opérationnelle, écriture de la ligne
     if(SDStatus == true){
       //création de l'arborescence Y/M si non existante
       SD.mkdir(setFolderName(NTP.getDateStr()));
@@ -516,7 +502,7 @@ void loop(){
         digitalWrite(LED_SD, HIGH);
       }
     }
-    
+    */
     //On va appeler l'url sur le synology pour sauvegarder les données
     //La clé sert pour ne pas appeler abusivement de webservice avec les données erronées depuis n'importe où
     if (client.connect(server, 81)) { 

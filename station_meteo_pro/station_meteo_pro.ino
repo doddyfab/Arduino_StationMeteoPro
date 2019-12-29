@@ -7,7 +7,7 @@
      - Girouette Lextronic    LEXCA002
      - Pluviomètre Lextronic  LEXCA001
      - Interfacage Lextronic Grove avec module SLD01099P
-     - Capteur BME280 pour pression atmosphérique
+     - Capteur BMP180 pour pression atmosphérique
      - Capteur SHT31 pour humidité
      - Capteur DS18B20 pour température sous abri météo jardin
 
@@ -23,6 +23,7 @@
   Date : 2019-09-05
 
   Changelog : 
+  29/12/2019  v1.4  Ajout capteur BMP180 pour pression atmostphérique, suppression DS18B20 et SHT31 (sonde externe)
   11/11/2019  v1.3  Ajout capteur DS18B20 sous abri météo pour températures
   26/10/2019  v1.2  Ajout capteur SHT31 pour temperature et humidité en remplacement du BME280
   16/09/2019  v1.1  Calibration temperature avec ajout offset
@@ -39,10 +40,10 @@
 #include <SD.h>
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
-#include <Adafruit_BME280.h>
 #include <TimeLib.h>
 #include <NtpClientLib.h>
 #include <ArduinoSort.h>
+#include <Adafruit_BMP085_U.h>
 
 
 
@@ -105,11 +106,11 @@ static float tab[20];
 /* 
  *  Variables globales d'initialisation
  */
-Adafruit_BME280 bme;  //BME280
-//Adafruit_SHT31 sht31 = Adafruit_SHT31(); //SHT31
+
 File myFile;          //fichier de stockage sur la carte SD
 char server[] = "192.168.1.2";  //IP du synology
 EthernetClient client;          //client pour appeler le webservice sur le synology
+Adafruit_BMP085_Unified bmp = Adafruit_BMP085_Unified(10085);
 
 /* 
  *  Setup initial de l'arduino
@@ -128,40 +129,6 @@ void setup()
   pinMode(LED_ERR, OUTPUT);  
   attachInterrupt(PLUVIOMETRE,interruptPluviometre,RISING) ;
   attachInterrupt(ANEMOMETRE,interruptAnemometre,RISING) ;
-  
- /* bool status;
-  status = bme.begin();  
-  if (!status) {
-    if(debug == true){
-      Serial.println("Could not find a valid BME280 sensor, check wiring!");
-    }
-    digitalWrite(LED_ERR, HIGH);
-      while (1);
-  }*/
-  
- /* //démarrage SHT31
-  if (! sht31.begin(0x44)) {   // Set to 0x45 for alternate i2c addr
-    Serial.println("Couldn't find SHT31");
-    while (1) delay(1);
-  }
-*/
-  /*
-  //on teste l'ouverture de la carte SD.
-  //si OK : clignotement de la led SD 1 fois
-  //si KO : on laisse allumé la led ERROR et la led SD
-  if (!SD.begin(4)) {    
-    if(debug == true){
-      Serial.println("initialization SD failed!");
-    }
-    digitalWrite(LED_ERR, HIGH);
-    digitalWrite(LED_SD, HIGH);
-  }
-  else{
-    SDStatus = true;
-    digitalWrite(LED_SD, HIGH);
-    delay(500);
-    digitalWrite(LED_SD, LOW);
-  }*/
 
   //Démarrage du réseau
   //Si OK : clignotement de la led NETWORK 1 fois
@@ -183,8 +150,6 @@ void setup()
     digitalWrite(LED_NET, LOW);
   } 
 
- // bool status = bme.begin(0x76);
-
   //Démarrage de la synchro NTP
   NTP.begin("fr.pool.ntp.org", 1, true);
   NTP.setInterval(60);
@@ -196,6 +161,15 @@ void setup()
     Serial.println (getNTPDateFR(NTP.getDateStr()));
     Serial.println (getNTPTimeFR(NTP.getTimeStr()));  
     Serial.println("initialization done.");
+  }
+
+  /* Initialise the sensor */
+  if(!bmp.begin())
+  {
+    /* There was a problem detecting the BMP085 ... check your connections */
+    Serial.print("Ooops, no BMP085 detected ... Check your wiring or I2C ADDR!");
+    digitalWrite(LED_ERR, HIGH); 
+    while(1);
   }
 }
 
@@ -363,17 +337,11 @@ void loop(){
     nbGir++;
 
   
-/*    double val1 = bme.readTemperature();
-    val1 = val1 + TEMP_OFFSET;
-
- /*
-    double val1 = sht31.readTemperature();
-    temp += val1;
-    */
-
-  //  double val2 = bme.readTemperature();
-  //  double P = getP((bme.readPressure() / 100.0F), val2);
-  //  pressure += P;
+    sensors_event_t event;
+    bmp.getEvent(&event);
+    float temperature;
+    bmp.getTemperature(&temperature);
+    double P = getP(event.pressure, temperature);
     
    /* double humidity = bme.readHumidity();
    // double humidity = sht31.readHumidity();
@@ -382,7 +350,7 @@ void loop(){
     temp += val1;
      double humidity = 0;
      hum += humidity;
-     double P = 1000;
+    // double P = 1000;
      pressure += P;
     nbBME280++;
 
